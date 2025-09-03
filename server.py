@@ -617,4 +617,4 @@ def get_current_status(working_directory: str) -> str:
 
 if __name__ == "__main__":
     port = os.getenv("MCP_PORT", "8000")
-    mcp.run(transport="http", host="127.0.0.1", port=8000)
+    mcp.run(transport="http", host="0.0.0.0", port=8000)
