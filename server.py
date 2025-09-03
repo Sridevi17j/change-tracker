@@ -70,9 +70,19 @@ DEFAULT_IGNORE_PATTERNS = [
 
 class ChangeTracker:
     def __init__(self, project_dir: str = "."):
-        self.project_dir = Path(project_dir).resolve()
+        # Ensure we get the absolute path of the working directory
+        if project_dir == ".":
+            # If current directory, get the absolute path from where the tool was called
+            self.project_dir = Path.cwd().resolve()
+        else:
+            self.project_dir = Path(project_dir).resolve()
+        
+        # Always create history directory within the project directory
         self.history_dir = self.project_dir / HISTORY_DIR
         self.states_dir = self.history_dir / STATES_DIR
+        
+        # Print where the history will be stored for debugging
+        print(f"[ChangeTracker] History directory will be: {self.history_dir}")
         
     def _should_ignore_file(self, file_path: str) -> bool:
         """Check if file should be ignored based on patterns"""
@@ -136,8 +146,10 @@ class ChangeTracker:
     def initialize_tracking(self) -> Dict[str, any]:
         """Initialize tracking by creating initial backup and file hashes"""
         # Create history directory
+        print(f"[ChangeTracker] Creating history directory at: {self.history_dir}")
         self.history_dir.mkdir(exist_ok=True)
         self.states_dir.mkdir(exist_ok=True)
+        print(f"[ChangeTracker] History directory created successfully")
         
         # Get all project files
         project_files = self._get_all_project_files()
@@ -423,16 +435,17 @@ def initialize_tracking(working_directory: str) -> str:
             "message": "working_directory is required. Please provide the project directory path."
         })
     
-    # Validate directory exists
-    if not os.path.exists(working_directory):
+    # Convert to absolute path and validate directory exists
+    abs_working_dir = str(Path(working_directory).resolve())
+    if not os.path.exists(abs_working_dir):
         return json.dumps({
             "status": "error",
-            "message": f"Directory does not exist: {working_directory}"
+            "message": f"Directory does not exist: {abs_working_dir}"
         })
     
-    tracker = ChangeTracker(working_directory)
+    tracker = ChangeTracker(abs_working_dir)
     result = tracker.initialize_tracking()
-    result["working_directory"] = working_directory
+    result["working_directory"] = abs_working_dir
     return json.dumps(result, indent=2)
 
 @mcp.tool()
@@ -453,17 +466,18 @@ def save_current_changes(working_directory: str, prompt_text: str = "", descript
             "message": "working_directory is required. Please provide the project directory path."
         })
     
-    # Create or update tracker for this directory
-    if not tracker or str(tracker.project_dir) != str(Path(working_directory).resolve()):
-        if not os.path.exists(working_directory):
+    # Convert to absolute path and create or update tracker for this directory
+    abs_working_dir = str(Path(working_directory).resolve())
+    if not tracker or str(tracker.project_dir) != abs_working_dir:
+        if not os.path.exists(abs_working_dir):
             return json.dumps({
                 "status": "error",
-                "message": f"Directory does not exist: {working_directory}"
+                "message": f"Directory does not exist: {abs_working_dir}"
             })
-        tracker = ChangeTracker(working_directory)
+        tracker = ChangeTracker(abs_working_dir)
     
     result = tracker.save_current_changes(prompt_text, description)
-    result["working_directory"] = working_directory
+    result["working_directory"] = abs_working_dir
     return json.dumps(result, indent=2)
 
 @mcp.tool()
@@ -483,16 +497,17 @@ def restore_to_state(working_directory: str, state_number: int) -> str:
             "message": "working_directory is required."
         })
     
-    if not tracker or str(tracker.project_dir) != str(Path(working_directory).resolve()):
-        if not os.path.exists(working_directory):
+    abs_working_dir = str(Path(working_directory).resolve())
+    if not tracker or str(tracker.project_dir) != abs_working_dir:
+        if not os.path.exists(abs_working_dir):
             return json.dumps({
                 "status": "error",
-                "message": f"Directory does not exist: {working_directory}"
+                "message": f"Directory does not exist: {abs_working_dir}"
             })
-        tracker = ChangeTracker(working_directory)
+        tracker = ChangeTracker(abs_working_dir)
     
     result = tracker.restore_to_state(state_number)
-    result["working_directory"] = working_directory
+    result["working_directory"] = abs_working_dir
     return json.dumps(result, indent=2)
 
 @mcp.tool()
@@ -511,16 +526,17 @@ def list_states(working_directory: str) -> str:
             "message": "working_directory is required."
         })
     
-    if not tracker or str(tracker.project_dir) != str(Path(working_directory).resolve()):
-        if not os.path.exists(working_directory):
+    abs_working_dir = str(Path(working_directory).resolve())
+    if not tracker or str(tracker.project_dir) != abs_working_dir:
+        if not os.path.exists(abs_working_dir):
             return json.dumps({
                 "status": "error",
-                "message": f"Directory does not exist: {working_directory}"
+                "message": f"Directory does not exist: {abs_working_dir}"
             })
-        tracker = ChangeTracker(working_directory)
+        tracker = ChangeTracker(abs_working_dir)
     
     result = tracker.list_states()
-    result["working_directory"] = working_directory
+    result["working_directory"] = abs_working_dir
     return json.dumps(result, indent=2)
 
 @mcp.tool()
@@ -540,16 +556,17 @@ def show_state_details(working_directory: str, state_number: int) -> str:
             "message": "working_directory is required."
         })
     
-    if not tracker or str(tracker.project_dir) != str(Path(working_directory).resolve()):
-        if not os.path.exists(working_directory):
+    abs_working_dir = str(Path(working_directory).resolve())
+    if not tracker or str(tracker.project_dir) != abs_working_dir:
+        if not os.path.exists(abs_working_dir):
             return json.dumps({
                 "status": "error",
-                "message": f"Directory does not exist: {working_directory}"
+                "message": f"Directory does not exist: {abs_working_dir}"
             })
-        tracker = ChangeTracker(working_directory)
+        tracker = ChangeTracker(abs_working_dir)
     
     result = tracker.show_state_details(state_number)
-    result["working_directory"] = working_directory
+    result["working_directory"] = abs_working_dir
     return json.dumps(result, indent=2)
 
 @mcp.tool()
@@ -569,16 +586,17 @@ def cleanup_old_states(working_directory: str, keep_last_n: int = 10) -> str:
             "message": "working_directory is required."
         })
     
-    if not tracker or str(tracker.project_dir) != str(Path(working_directory).resolve()):
-        if not os.path.exists(working_directory):
+    abs_working_dir = str(Path(working_directory).resolve())
+    if not tracker or str(tracker.project_dir) != abs_working_dir:
+        if not os.path.exists(abs_working_dir):
             return json.dumps({
                 "status": "error",
-                "message": f"Directory does not exist: {working_directory}"
+                "message": f"Directory does not exist: {abs_working_dir}"
             })
-        tracker = ChangeTracker(working_directory)
+        tracker = ChangeTracker(abs_working_dir)
     
     result = tracker.cleanup_states(keep_last_n)
-    result["working_directory"] = working_directory
+    result["working_directory"] = abs_working_dir
     return json.dumps(result, indent=2)
 
 @mcp.tool()
@@ -595,13 +613,16 @@ def get_current_status(working_directory: str) -> str:
             "message": "working_directory is required."
         })
     
-    if not os.path.exists(working_directory):
+    # Convert working_directory to absolute path to ensure consistency
+    abs_working_dir = str(Path(working_directory).resolve())
+    
+    if not os.path.exists(abs_working_dir):
         return json.dumps({
             "status": "error",
-            "message": f"Directory does not exist: {working_directory}"
+            "message": f"Directory does not exist: {abs_working_dir}"
         })
     
-    temp_tracker = ChangeTracker(working_directory)
+    temp_tracker = ChangeTracker(abs_working_dir)
     metadata = temp_tracker._load_metadata()
     
     status_info = {
@@ -609,12 +630,13 @@ def get_current_status(working_directory: str) -> str:
         "current_state": metadata.get("current_state", 0),
         "total_states": len(metadata.get("states", [])),
         "initialized_at": metadata.get("initialized_at", "Not initialized"),
-        "working_directory": working_directory,
+        "working_directory": abs_working_dir,
         "history_directory": str(temp_tracker.history_dir)
     }
     
     return json.dumps(status_info, indent=2)
 
 if __name__ == "__main__":
+    print("Starting MCP Change Tracker Server - Testing print statement!")
     port = os.getenv("MCP_PORT", "8000")
     mcp.run(transport="http", host="0.0.0.0", port=8000)
