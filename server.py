@@ -115,8 +115,11 @@ class ChangeTracker:
         """Load metadata about saved states"""
         metadata_path = self.history_dir / METADATA_FILE
         if metadata_path.exists():
-            with open(metadata_path, 'r') as f:
-                return json.load(f)
+            try:
+                with open(metadata_path, 'r') as f:
+                    return json.load(f)
+            except (FileNotFoundError, json.JSONDecodeError):
+                pass
         return {"states": [], "current_state": 0}
     
     def _save_metadata(self, metadata: Dict):
@@ -129,8 +132,11 @@ class ChangeTracker:
         """Load initial file hashes"""
         hash_path = self.history_dir / FILE_HASHES
         if hash_path.exists():
-            with open(hash_path, 'r') as f:
-                return json.load(f)
+            try:
+                with open(hash_path, 'r') as f:
+                    return json.load(f)
+            except (FileNotFoundError, json.JSONDecodeError):
+                pass
         return {}
     
     def _save_file_hashes(self, hashes: Dict[str, str]):
